@@ -9,7 +9,7 @@ def extract_location(query: str) -> Optional[str]:
     query_lower = query.lower()
     
     # Stop at end of sentence, comma, or 'exploring', 'visiting', etc.
-    match = re.search(r'\b(?:in|at)\s+([a-zA-Z\-]+)', query_lower)
+    match = re.search(r'\b(?:in|at|to)\s+([a-zA-Z\-]+)', query_lower)
     if match:
         loc = match.group(1).strip()
         loc = loc.capitalize()  # match your DB casing
