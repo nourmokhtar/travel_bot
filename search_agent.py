@@ -118,7 +118,7 @@ async def search_agent_fallback(query: str) -> str:
 
     # Step 2: Scrape content from top links (limit to 3)
     scraped_texts = []
-    for link in links[:3]:
+    for link in links[:2]:
         text = await fetch_text(link)
         if text:
             scraped_texts.append(text)
