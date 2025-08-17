@@ -5,6 +5,8 @@ import asyncio
 import time
 import json
 from dotenv import load_dotenv
+import sys
+
 
 load_dotenv()
 
@@ -204,39 +206,56 @@ def persist_facts_and_answer(session_id, user_query, facts, answer):
     except Exception as e:
         print("⚠️ Failed to store in Zep:", e)
 
+import subprocess  # Add at the top of your file
 
 # ---------------- Main Loop ----------------
 async def main():
     clear_session_messages(SESSION_ID)
     ensure_session()
-    print("✅ Zep session ready:", SESSION_ID)
+    print("🛫 Welcome to BASSIR ! I can help you plan your trips.")
+    print("💡 Tip: Type 'custom' or 'personalized' in your query to plan a fully personalized trip.")
+    print("💡 Tip: Type 'recap' anytime to see the summary of your conversation so far.")
+    print("Type 'exit' anytime to quit.\n")
 
     while True:
         user_query = input("📝 Enter your travel query (or 'exit'): ").strip()
         if user_query.lower() in ("exit", "quit"):
+            print("👋 Goodbye! Have a great trip!")
             break
         if not user_query:
+            print("⚠️ Please enter a query.")
             continue
+        # Check if user wants a recap
+        if user_query.lower() == "recap":
+            print("📄 Showing conversation recap...")
+            try:
+                subprocess.run([sys.executable, "zep_view.py"], check=True)
+            except Exception as e:
+                print("⚠️ Failed to execute zep_view.py:", e)
+            continue  # Go back to input prompt
 
         # Determine if user wants a personalized trip
         personalized_mode = "personalized" in user_query.lower() or "custom" in user_query.lower()
 
         # Extract + store facts
         facts = extract_relevant_facts(user_query)
-        print(f"📌 Facts for this session so far: {facts}")
-
-        # Ask for missing facts only in personalized mode
         if personalized_mode:
             facts = await ask_for_missing_facts(facts)
-            print(f"📌 Updated facts after follow-up: {facts}")
 
-        # Build a proper query for RAG including all facts
-        if personalized_mode:
-            rag_input_text = "Plan a personalized trip with these facts:\n" + json.dumps(facts, indent=2)
-            llm_user_query = "Please create a detailed personalized travel plan using the facts below:\n" + json.dumps(facts, indent=2)
-        else:
-            rag_input_text = user_query
-            llm_user_query = user_query
+            # Confirm facts with user
+            print("\n📌 Let's confirm the details:")
+            print(f"Destination: {facts.get('location')}")
+            print(f"Duration: {facts.get('duration')} days")
+            print(f"Budget: ${facts.get('budget')}")
+            print(f"Experience type: {facts.get('preferences')}")
+            confirm = input("Are these correct? (yes/no): ").strip().lower()
+            if confirm not in ("yes", "y"):
+                print("Let's update the facts again.")
+                facts = await ask_for_missing_facts(facts)
+
+        print("\n🌐 Fetching local travel data...")
+        rag_input_text = "Plan a personalized trip with these facts:\n" + json.dumps(facts, indent=2)
+        llm_user_query = "Please create a detailed personalized travel plan using the facts below:\n" + json.dumps(facts, indent=2)
 
         # Retrieve RAG context
         location = facts.get("location")
@@ -265,6 +284,7 @@ async def main():
              "8) Be concise, clear, and engaging."
             }
         ]
+
         start_time = time.time()
         try:
             answer = call_llm(messages, user_query=llm_user_query, location=location)
@@ -273,10 +293,13 @@ async def main():
             answer = "Sorry — I couldn't generate an answer right now."
 
         print(f"\n⏱️ LLM response took {time.time() - start_time:.2f}s\n")
-        print("💡 Answer:\n", answer)
+        print("💡 Your Trip Plan:\n", answer)
 
         # Store facts + answer in Zep
         persist_facts_and_answer(SESSION_ID, user_query, facts, answer)
+
+        print("\n--------------------------------------------\n")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
