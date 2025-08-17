@@ -1,7 +1,8 @@
 from query_handler import extract_location
 from retrival import query_qdrant
 from llm import answer_question
-from search_agent import search_agent_fallback, register_search_in_kb  # your fallback search agent
+from search_agent import search_agent_fallback, save_fallback_to_qdrant
+  # your fallback search agent
 import asyncio
 import time
 
@@ -47,7 +48,7 @@ async def main():
                 country = extracted_location
 
             try:
-                success = register_search_in_kb(
+                success = save_fallback_to_qdrant(
                     question=user_query,
                     answer=context_texts,
                     location_key=extracted_location,

@@ -41,8 +41,6 @@ def answer_question(question: str, location: str = None, top_k: int = 5) -> str:
 
     # Combine text from retrieved docs
     context = "\n\n".join([doc['text'] for doc in docs])
-    print("📝 Answer from qdrant :")
-    print(context)
 
 
     messages = [

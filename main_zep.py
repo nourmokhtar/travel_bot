@@ -183,25 +183,26 @@ async def main():
 
         if not context_results:
             print("🌐 No local data, using fallback search...")
-            fallback_answer = await search_agent_fallback(user_query)
+            fallback_answer = await search_agent_fallback(user_query, location_key=location, country=location, city=None)
             context_texts = fallback_answer
-            try:
-                register_search_in_kb(
-                    question=user_query,
-                    answer=context_texts,
-                    location_key=location,
-                    country=location,
-                    city=None
-                )
-            except Exception as e:
-                print("❌ Error registering fallback result:", e)
-
+            
         # Build LLM messages
+         # 4) LLM messages (provide facts + readable context)
         messages = [
-            {"role": "system", "content": "You are a world-class travel assistant. Use ONLY the provided context and facts to answer."},
-            {"role": "user", "content": f"Facts so far:\n{json.dumps(facts, indent=2)}\n\nRAG context:\n{context_texts}\n\nUser Question:\n{user_query}"}
+            {"role":"system", "content":
+             "You are a world-class travel assistant. Use ONLY the provided context and the provided facts."},
+            {"role":"user", "content":
+             f"Facts so far:\n{json.dumps(facts, indent=2)}\n\nRAG context:\n{context_texts}\n\nUser Question:\n{user_query}\n\n"
+             "Instructions: 1) Provide a day-by-day plan (morning, evening, night). "
+             "2) Mention signature dishes & restaurants with approximate costs. "
+             "3) Include accommodation suggestions with price ranges. "
+             "4) Include transport options between locations with approximate fares. "
+             "5) Provide safety tips & common scams. "
+             "6) Add a final trip cost estimate. "
+             "7) Include any unique local tips or must-see spots. "
+             "8) Be concise, clear, and engaging."
+            }
         ]
-
         start_time = time.time()
         try:
             answer = call_llm(messages, user_query=user_query, location=location)
